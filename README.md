@@ -1,24 +1,5 @@
 # triple-town-clone
 
-## Project setup
-```
-yarn install
-```
+A clone of the [Triple Town mobile game](https://apps.apple.com/us/app/triple-town-fun-addictive-puzzle-matching-game/id490532168).
 
-### Compiles and hot-reloads for development
-```
-yarn serve
-```
-
-### Compiles and minifies for production
-```
-yarn build
-```
-
-### Lints and fixes files
-```
-yarn lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+![](preview.png)
