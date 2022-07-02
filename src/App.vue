@@ -1,6 +1,10 @@
 <template>
   <div id="app">
-    <div>History: {{ turns }} years ... Points: {{ points }} ... Holding {{ states[holding] }}</div>
+    <div>
+      History: {{ turns }} years ...
+      Points: {{ points }} ... 
+      Holding <span :class="[states[holding]]">{{ states[holding] }}</span>
+    </div>
     <div class="grid">
       <div
         class="row"
@@ -92,7 +96,16 @@ export default {
       if (this.getStateClass(i, j) != 'empty') return;
       this.turns++;
       this.setCell(i, j, this.holding);
+
       this.absorbSurroundingSimilarCells(i, j);
+
+      // hold a potentially-different item next
+      let state = 1; // grass
+      const r = Math.random();
+      if (r > 0.98) state = 4; // hut
+      else if (r > 0.92) state = 3; // tree
+      else if (r > 0.82) state = 2; // bush
+      this.holding = state;
     },
     // absorbSurroundingSimilarCells absorbs surrounding cells of the given cell,
     // checking adjacent cells and those adjacent cells.
