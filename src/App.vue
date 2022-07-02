@@ -25,14 +25,9 @@ export default {
   name: 'App',
   data() {
     return {
-      grid: [
-        [0,0,0,0,0,0],
-        [0,0,0,0,0,0],
-        [0,0,0,0,0,0],
-        [0,0,0,0,0,0],
-        [0,0,0,0,0,0],
-        [0,0,0,0,0,0],
-      ],
+      gridHeight: 6,
+      gridWidth: 6,
+      grid: [], // 2D array of cells
       states: [
         'empty',
         'grass',
@@ -49,7 +44,43 @@ export default {
       turns: 0,
     };
   },
+  created() {
+    this.generateGrid();
+  },
   methods: {
+    generateGrid() {
+      // initialize grid with random cell states
+      const grid = []
+      for (let i = 0; i < this.gridHeight; i++) {
+        const row = []
+        for (let j = 0; j < this.gridWidth; j++) {
+          let cell = 0; // empty
+          const r = Math.random();
+          if (r > 0.95) cell = 4; // hut
+          else if (r > 0.85) cell = 3; // tree
+          else if (r > 0.7) cell = 2; // bush
+          else if (r > 0.5) cell = 1; // grass
+          row.push(cell);
+        }
+        grid.push(row);
+      }
+      this.grid = grid;
+
+      // Absorb cells into each other to ensure the map starts in a way that could happen naturally in a game.
+      // This means, for example, even if we limit random cells to hut or lower, they could still end up merging
+      // to a house or more.
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        let absorbedAtLeastOnce = false;
+        for (let i = 0; i < this.gridHeight; i++) {
+          for (let j = 0; j < this.gridWidth; j++) {
+            const absorbedThisTime = this.absorbSurroundingSimilarCells(i, j);
+            absorbedAtLeastOnce = absorbedAtLeastOnce || absorbedThisTime;
+          }
+        }
+        if (!absorbedAtLeastOnce) break;
+      }
+    },
     getState(i, j) {
       return this.grid[i][j];
     },
@@ -63,6 +94,10 @@ export default {
       this.setCell(i, j, this.holding);
       this.absorbSurroundingSimilarCells(i, j);
     },
+    // absorbSurroundingSimilarCells absorbs surrounding cells of the given cell,
+    // checking adjacent cells and those adjacent cells.
+    // Adjacent means directly above, below, left or right of the cell (not diagonal).
+    // Returns true if surrounding cells were absorbed.
     absorbSurroundingSimilarCells(i, j) {
       let state = this.grid[i][j];
 
@@ -94,7 +129,11 @@ export default {
 
         // might be able to absorb other similar cells now that this cell changed
         this.absorbSurroundingSimilarCells(i, j);
+
+        return true;
       }
+
+      return false;
     },
     getAdjacentMatchingCells(i, j, state) {
       const adjacentMatchingCells = [];
