@@ -1,5 +1,13 @@
 <template>
   <div id="app">
+    <div>
+      Stash:
+      <span
+        id="stash"
+        :class="[states[stashed]]"
+        @click="clickStash"
+      >{{ states[stashed] }}</span>
+    </div>
     <div id="holding" :class="[states[holding]]">{{ states[holding] }}</div>
     <div>
       History: {{ turns }} years ...
@@ -15,7 +23,7 @@
           :class="['cell', getStateClass(i, j)]"
           v-for="(cell, j) in row"
           :key="j"
-          @click="click(i, j)"
+          @click="clickCell(i, j)"
         >
           <span>{{ getStateClass(i, j) }}</span>
         </span>
@@ -46,6 +54,7 @@ export default {
       holding: 1, // grass
       points: 0,
       turns: 0,
+      stashed: 0, // empty
     };
   },
   created() {
@@ -98,20 +107,22 @@ export default {
       const stateIndex = this.getState(i, j);
       return this.states[stateIndex];
     },
-    click(i, j) {
-      if (this.getStateClass(i, j) != 'empty') return;
-      this.turns++;
-      this.setCell(i, j, this.holding);
-
-      this.absorbSurroundingSimilarCells(i, j);
-
-      // hold a potentially-different item next
+    setNextHolding() {
       let state = 1; // grass
       const r = Math.random();
       if (r > 0.98) state = 4; // hut
       else if (r > 0.92) state = 3; // tree
       else if (r > 0.82) state = 2; // bush
       this.holding = state;
+    },
+    clickCell(i, j) {
+      if (this.getStateClass(i, j) != 'empty') return;
+      this.turns++;
+      this.setCell(i, j, this.holding);
+
+      this.absorbSurroundingSimilarCells(i, j);
+
+      this.setNextHolding();
     },
     // absorbSurroundingSimilarCells absorbs surrounding cells of the given cell,
     // checking adjacent cells and those adjacent cells.
@@ -173,6 +184,19 @@ export default {
       newRow[j] = state;
       // update it in the grid
       this.$set(this.grid, i, newRow);
+    },
+    clickStash() {
+      const stashed = this.stashed;
+      this.stashed = this.holding;
+
+      if (stashed == 0) {
+        // Stash was empty, so we just dropped the first item into it,
+        // meaning we need to hold a new random item.
+        this.setNextHolding();
+      } else {
+        // Stash had something, so we just swapped what we were holding.
+        this.holding = stashed;
+      }
     },
   },  
 };
