@@ -1,9 +1,9 @@
 <template>
   <div id="app">
+    <div id="holding" :class="[states[holding]]">{{ states[holding] }}</div>
     <div>
       History: {{ turns }} years ...
-      Points: {{ points }} ... 
-      Holding <span :class="[states[holding]]">{{ states[holding] }}</span>
+      Points: {{ points }}
     </div>
     <div class="grid">
       <div
@@ -50,6 +50,12 @@ export default {
   },
   created() {
     this.generateGrid();
+
+    document.addEventListener('mousemove', function(e) {
+      const holding = document.getElementById('holding');
+      holding.style.left = e.clientX + 15 + 'px';
+      holding.style.top = e.clientY + 15 + 'px';
+    });
   },
   methods: {
     generateGrid() {
@@ -227,5 +233,12 @@ body {
 }
 .sky_castle {
   background-color: darkgrey;
+}
+
+#holding {
+  position: absolute;
+  box-shadow: 5px 3px 20px 2px black;
+  padding: 2px 6px;
+  border-radius: 5px;
 }
 </style>
