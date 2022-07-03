@@ -2,13 +2,9 @@
   <div id="app">
     <div>
       Stash:
-      <span
-        id="stash"
-        :class="[states[stashed]]"
-        @click="clickStash"
-      >{{ states[stashed] }}</span>
+      <span id="stash" :class="stashed" @click="clickStash">{{ stashed }}</span>
     </div>
-    <div id="holding" :class="[states[holding]]">{{ states[holding] }}</div>
+    <div id="holding" :class="holding">{{ holding }}</div>
     <div>
       History: {{ turns }} years ...
       Points: {{ points }}
@@ -20,12 +16,12 @@
         :key="i"
       >
         <span
-          :class="['cell', getStateClass(i, j)]"
+          :class="['cell', grid[i][j]]"
           v-for="(cell, j) in row"
           :key="j"
           @click="clickCell(i, j)"
         >
-          <span>{{ getStateClass(i, j) }}</span>
+          <span>{{ grid[i][j] }}</span>
         </span>
       </div>
     </div>
@@ -40,21 +36,48 @@ export default {
       gridHeight: 6,
       gridWidth: 6,
       grid: [], // 2D array of cells
-      states: [
-        'empty',
-        'grass',
-        'bush',
-        'tree',
-        'hut',
-        'house',
-        'mansion',
-        'castle',
-        'sky_castle',
-      ],
-      holding: 1, // grass
+      stateInfo: {
+        empty: {
+          next: '', // doesn't merge to become anything
+          points: 0, // hence cannot give points
+        },
+        grass: {
+          next: 'bush',
+          points: 5,
+        },
+        bush: {
+          next: 'tree',
+          points: 10,
+        },
+        tree: {
+          next: 'hut',
+          points: 25,
+        },
+        hut: {
+          next: 'house',
+          points: 75,
+        },
+        house: {
+          next: 'mansion',
+          points: 250,
+        },
+        mansion: {
+          next: 'castle',
+          points: 1000,
+        },
+        castle: {
+          next: 'sky_castle',
+          points: 5000,
+        },
+        sky_castle: {
+          next: 'space_station',
+          points: 25000,
+        },
+      },
+      holding: 'grass',
       points: 0,
       turns: 0,
-      stashed: 0, // empty
+      stashed: 'empty',
     };
   },
   created() {
@@ -73,12 +96,12 @@ export default {
       for (let i = 0; i < this.gridHeight; i++) {
         const row = []
         for (let j = 0; j < this.gridWidth; j++) {
-          let cell = 0; // empty
+          let cell = 'empty';
           const r = Math.random();
-          if (r > 0.95) cell = 4; // hut
-          else if (r > 0.85) cell = 3; // tree
-          else if (r > 0.7) cell = 2; // bush
-          else if (r > 0.5) cell = 1; // grass
+          if (r > 0.95) cell = 'hut';
+          else if (r > 0.85) cell = 'tree';
+          else if (r > 0.7) cell = 'bush';
+          else if (r > 0.5) cell = 'grass';
           row.push(cell);
         }
         grid.push(row);
@@ -99,24 +122,20 @@ export default {
         }
         if (!absorbedAtLeastOnce) break;
       }
-    },
-    getState(i, j) {
-      return this.grid[i][j];
-    },
-    getStateClass(i, j) {
-      const stateIndex = this.getState(i, j);
-      return this.states[stateIndex];
+
+      // reset points, as merging during generation may have scored points
+      this.points = 0;
     },
     setNextHolding() {
-      let state = 1; // grass
+      let state = 'grass';
       const r = Math.random();
-      if (r > 0.98) state = 4; // hut
-      else if (r > 0.92) state = 3; // tree
-      else if (r > 0.82) state = 2; // bush
+      if (r > 0.98) state = 'hut';
+      else if (r > 0.92) state = 'tree';
+      else if (r > 0.82) state = 'bush';
       this.holding = state;
     },
     clickCell(i, j) {
-      if (this.getStateClass(i, j) != 'empty') return;
+      if (this.grid[i][j] != 'empty') return;
       this.turns++;
       this.setCell(i, j, this.holding);
 
@@ -130,6 +149,9 @@ export default {
     // Returns true if surrounding cells were absorbed.
     absorbSurroundingSimilarCells(i, j) {
       let state = this.grid[i][j];
+
+      // do nothing if cell has a state which does not merge into something
+      if (!this.stateInfo[state].next) return;
 
       // identify all adjacent similar cells...
       let adj = this.getAdjacentMatchingCells(i, j, state);
@@ -146,16 +168,15 @@ export default {
       // then merge them into this one
       const matchingCells = adj.concat(adjadj);
       if (matchingCells.length >= 2) {
-        // reset adjacent cells
+        // reset matching cells
         for (const [i, j] of matchingCells)
-          this.setCell(i, j, 0);
+          this.setCell(i, j, 'empty');
         
         // upgrade this cell
-        state++;
-        this.setCell(i, j, state);
+        this.setCell(i, j, this.stateInfo[state].next);
 
          // award points
-        this.points += state*state;
+        this.points += this.stateInfo[state].points*this.stateInfo[state].points;
 
         // might be able to absorb other similar cells now that this cell changed
         this.absorbSurroundingSimilarCells(i, j);
@@ -171,9 +192,9 @@ export default {
         adjacentMatchingCells.push([i-1,j]);
       if (j > 0 && this.grid[i][j-1] == state)
         adjacentMatchingCells.push([i,j-1]);
-      if (i < this.grid.length-1 && this.grid[i+1][j] == state)
+      if (i < this.gridHeight-1 && this.grid[i+1][j] == state)
         adjacentMatchingCells.push([i+1,j]);
-      if (j < this.grid[0].length-1 && this.grid[i][j+1] == state)
+      if (j < this.gridWidth-1 && this.grid[i][j+1] == state)
          adjacentMatchingCells.push([i,j+1]);
       return adjacentMatchingCells;
     },
@@ -189,7 +210,7 @@ export default {
       const stashed = this.stashed;
       this.stashed = this.holding;
 
-      if (stashed == 0) {
+      if (stashed == 'empty') {
         // Stash was empty, so we just dropped the first item into it,
         // meaning we need to hold a new random item.
         this.setNextHolding();
@@ -257,6 +278,9 @@ body {
 }
 .sky_castle {
   background-color: darkgrey;
+}
+.space_station  {
+  background-color: purple;
 }
 
 #holding {
