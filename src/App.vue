@@ -73,6 +73,7 @@ export default {
           next: 'space_station',
           points: 25000,
         },
+        destroyer: {},
       },
       holding: 'grass',
       points: 0,
@@ -132,15 +133,30 @@ export default {
       if (r > 0.98) state = 'hut';
       else if (r > 0.92) state = 'tree';
       else if (r > 0.82) state = 'bush';
+      else if (r > 0.79) state = 'destroyer';
       this.holding = state;
     },
     clickCell(i, j) {
-      if (this.grid[i][j] != 'empty') return;
+      if (this.grid[i][j] == 'empty') {
+        if (this.holding == 'destroyer') {
+          // cannot destroy emptiness; do nothing
+          return;
+        } else {
+          // place something on empty
+          this.setCell(i, j, this.holding);
+          this.absorbSurroundingSimilarCells(i, j);
+        }
+      } else { // cell has something
+        if (this.holding == 'destroyer') {
+          // destroy the thing
+          this.setCell(i, j, 'empty');
+        } else {
+          // can't put something on something; do nothing
+          return;
+        }
+      }
+
       this.turns++;
-      this.setCell(i, j, this.holding);
-
-      this.absorbSurroundingSimilarCells(i, j);
-
       this.setNextHolding();
     },
     // absorbSurroundingSimilarCells absorbs surrounding cells of the given cell,
@@ -279,8 +295,12 @@ body {
 .sky_castle {
   background-color: darkgrey;
 }
-.space_station  {
+.space_station {
   background-color: purple;
+}
+.destroyer {
+  background-color: yellow;
+  color: black;
 }
 
 #holding {
